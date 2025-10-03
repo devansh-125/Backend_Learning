@@ -274,8 +274,6 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
 });
 
 
-import { v2 as cloudinary } from "cloudinary"; 
-
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
     const avatarLocalPath = req.file?.path;
