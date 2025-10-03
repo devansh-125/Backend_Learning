@@ -5,6 +5,7 @@ import {User} from "../models/user.model.js"
 import { uploadCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
+import mongoose from "mongoose"
 
 // import {unlinkSync} from "fs"
 
@@ -227,13 +228,13 @@ const changeCurrentPassword = asyncHandler( async(req , res) => {
 
     const {oldpassword,  newpassword} = req.body
     const user =  await User.findById(req?.user._id)
-    const isPasswordCorrect  =  isPasswordCorrect(oldpassword)
+    const isPasswordCorrect  =  await user.isPasswordCorrect(oldpassword)
     
     if(!isPasswordCorrect){
         throw new ApiError(400, "Invalid Password")
     }
     user.password = newpassword
-    await user.save({validateBeforeSave: fasle})
+    await user.save({validateBeforeSave: false})
 
     return res
     .status(200)
@@ -244,7 +245,7 @@ const changeCurrentPassword = asyncHandler( async(req , res) => {
 const getCurrentUser = asyncHandler( async (req, res)=>{
     return res
     .status(200)
-    .json(200, req.user , "current user fetched successfully ")
+    .json(new ApiResponse(200, req.user , "current user fetched successfully "))
 });
 
 
@@ -330,7 +331,7 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
 // });
 
 const updateUserAvatar = asyncHandler(async(req, res) => {
-    const avatarLocalPath = req.files?.path
+    const avatarLocalPath = req.file?.path
 
     if (!avatarLocalPath) {
         throw new ApiError(400, `Avatar file is missing `)
@@ -338,7 +339,7 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
 
     //TODO: delete old image - assignment
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const avatar = await uploadCloudinary(avatarLocalPath)
 
     if (!avatar.url) {
         throw new ApiError(400, "Error while uploading on avatar")
@@ -370,7 +371,7 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
         throw new ApiError(400, "Cover image file is missing")
     }
 
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const coverImage = await uploadCloudinary(coverImageLocalPath)
 
     if (!coverImage.url) {
         throw new ApiError(400, "Error while uploading on avatar")
@@ -475,28 +476,8 @@ const getUserChannelProfile = asyncHandler( async(req,res) => {
 });
 
 
-const getwatchHistory =  asyncHandler(async(req,res) =>{
 
-    const user = await User.aggregate([
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(req.user._id)
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "watchHistory"
-            }
-        }
-    ])
-
-})
-
-
-const getWatchHistory = asyncHandler(async(req, res) => {
+const getwatchHistory = asyncHandler(async(req, res) => {
     const user = await User.aggregate([
         {
             $match: {
