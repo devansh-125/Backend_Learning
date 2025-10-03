@@ -274,126 +274,108 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
 });
 
 
-// const updateUserAvatar = asyncHandler(async (req, res) => {
-//     // Check if a file was uploaded
-//     const avatarLocalPath = req.file?.path;
-//     if (!avatarLocalPath) {
-//         throw new ApiError(400, "Avatar file is missing");
-//     }
+import { v2 as cloudinary } from "cloudinary"; 
 
-//     // Step 1: Get the old avatar's URL BEFORE updating
-//     // We need this reference to delete it later
-//     const userBeforeUpdate = await User.findById(req.user?._id);
-//     const oldAvatarUrl = userBeforeUpdate?.avatar;
 
-//     // Step 2: Upload the new file to Cloudinary
-//     const avatar = await uploadOnCloudinary(avatarLocalPath);
-//     if (!avatar?.url) {
-//         throw new ApiError(500, "Error while uploading new avatar on Cloudinary");
-//     }
-
-//     // Step 3: Update the user's avatar field in the database with the new URL
-//     const user = await User.findByIdAndUpdate(
-//         req.user?._id,
-//         {
-//             $set: {
-//                 avatar: avatar.url // Set the new avatar URL
-//             }
-//         },
-//         { new: true } // This option returns the updated document
-//     ).select("-password");
-
-//     // Step 4: After a successful update, delete the old avatar from Cloudinary
-//     if (oldAvatarUrl) {
-//         try {
-//             // Extract the public_id from the full URL
-//             const urlParts = oldAvatarUrl.split('/');
-//             const publicIdWithFolder = urlParts.slice(-2).join('/'); // e.g., "avatars/filename.jpg"
-//             const publicId = publicIdWithFolder.split('.')[0]; // e.g., "avatars/filename"
-            
-//             if (publicId) {
-//                 // Use Cloudinary's destroy method
-//                 await cloudinary.uploader.destroy(publicId);
-//             }
-//         } catch (error) {
-//             // Log an error if deletion fails, but don't fail the entire request
-//             // because the user's avatar was successfully updated.
-//             console.error("Failed to delete the old avatar from Cloudinary:", error);
-//         }
-//     }
-
-//     // Step 5: Send the successful response back to the client
-//     return res
-//         .status(200)
-//         .json(
-//             new ApiResponse(200, user, "Avatar image updated successfully")
-//         );
-// });
-
-const updateUserAvatar = asyncHandler(async(req, res) => {
-    const avatarLocalPath = req.file?.path
-
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path;
     if (!avatarLocalPath) {
-        throw new ApiError(400, `Avatar file is missing `)
+        throw new ApiError(400, "Avatar file is missing");
     }
 
-    //TODO: delete old image - assignment
+    // Step 1: Get the old avatar's URL BEFORE updating
+    // We need this reference to delete it later
+    const oldAvatarUrl = req.user?.avatar;
 
-    const avatar = await uploadCloudinary(avatarLocalPath)
-
-    if (!avatar.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-        
+    // Step 2: Upload the new file to Cloudinary
+    const avatar = await uploadCloudinary(avatarLocalPath);
+    if (!avatar?.url) {
+        throw new ApiError(500, "Error while uploading new avatar on Cloudinary");
     }
 
+    // Step 3: Update the user's avatar field in the database with the new URL
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set:{
-                avatar: avatar.url
+            $set: {
+                avatar: avatar.url // Set the new avatar URL
             }
         },
-        {new: true}
-    ).select("-password")
+        { new: true } // This option returns the updated document
+    ).select("-password");
 
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(200, user, "Avatar image updated successfully")
-    )
-})
-
-
-const updateUserCoverImage = asyncHandler(async(req, res) => {
-    const coverImageLocalPath = req.file?.path
-
-    if (!coverImageLocalPath) {
-        throw new ApiError(400, "Cover image file is missing")
+    // Step 4: After a successful update, delete the old avatar from Cloudinary
+    if (oldAvatarUrl) {
+        try {
+            // Extract the public_id from the full URL. 
+            // Example URL: http://res.cloudinary.com/demo/image/upload/v1234/folder/sample.jpg
+            // We need to extract "folder/sample"
+            const publicId = oldAvatarUrl.split('/').pop().split('.')[0];
+            
+            if (publicId) {
+                // Use Cloudinary's destroy method to delete the old image
+                await cloudinary.uploader.destroy(publicId);
+            }
+            // console.log("old file delete successfully")
+        } catch (error) {
+            // Log an error if deletion fails, but don't fail the entire request
+            // because the user's avatar was successfully updated.
+            console.error("Failed to delete the old avatar from Cloudinary:", error);
+        }
     }
 
-    const coverImage = await uploadCloudinary(coverImageLocalPath)
+    // Step 5: Send the successful response back to the client
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, user, "Avatar image updated successfully")
+        );
+});
 
-    if (!coverImage.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-        
+
+import { v2 as cloudinary } from "cloudinary";
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.path;
+    if (!coverImageLocalPath) {
+        throw new ApiError(400, "Cover image file is missing");
+    }
+
+    const oldCoverImageUrl = req.user?.coverImage;
+
+    const coverImage = await uploadCloudinary(coverImageLocalPath);
+    if (!coverImage?.url) {
+        throw new ApiError(500, "Error while uploading cover image to Cloudinary");
     }
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set:{
+            $set: {
                 coverImage: coverImage.url
             }
         },
-        {new: true}
-    ).select("-password")
+        { new: true }
+    ).select("-password");
+
+    if (oldCoverImageUrl) {
+        try {
+            const publicId = oldCoverImageUrl.split('/').pop().split('.')[0];
+            if (publicId) {
+                await cloudinary.uploader.destroy(publicId);
+            }
+        } catch (error) {
+            console.error("Failed to delete the old cover image from Cloudinary:", error);
+        }
+    }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, user, "Cover image updated successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, user, "Cover image updated successfully")
+        );
 });
+
 
 
 const getUserChannelProfile = asyncHandler( async(req,res) => {
