@@ -15,13 +15,6 @@ import { changeCurrentPassword,
 import {upload} from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 
-const inspector = (req, res, next) => {
-    console.log('--- INSPECTOR LOG ---');
-    console.log('Time:', new Date().toLocaleTimeString());
-    console.log('Request Headers:', req.headers);
-    console.log('--- END OF LOG ---');
-    next();
-};
 
 
 const router = Router()
